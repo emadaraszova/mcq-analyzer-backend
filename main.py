@@ -5,82 +5,96 @@ from typing import Dict, List
 from dotenv import load_dotenv
 import os
 import requests
+import google.generativeai as genai
 
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+if not OPENAI_API_KEY or not GEMINI_API_KEY:
+    raise RuntimeError("API keys for OpenAI and Gemini are not set.")
 
-API_KEY = os.getenv("OPENAI_API_KEY")
-if not API_KEY:
-    raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
-API_URL = "https://api.openai.com/v1/chat/completions"
-
+genai.configure(api_key=GEMINI_API_KEY)
 
 app = FastAPI()
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (for development; restrict in production)
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# In-memory storage for conversation history
 sessions: Dict[str, List[Dict[str, str]]] = {}
 
-# Define the request model
 class UserMessage(BaseModel):
-    session_id: str  # Unique session identifier
-    message: str     # User's new message
-    model: str  # Default model
-    # temperature: float = 0.7  # Optional, default value
-    # top_p: float = 1.0        # Optional, default value
-    # frequency_penalty: float = 0.0  # Optional, default value
-    # presence_penalty: float = 0.0   # Optional, default value
-    
+    session_id: str
+    message: str
+    model: str
 
 @app.post("/api/generate-response")
 async def generate_response(user_message: UserMessage):
     try:
+        
         if user_message.session_id not in sessions:
             sessions[user_message.session_id] = [
-                {"role": "system", "content": "You are a helpful assistant."}
+                {"role": "user", "content": "You are a helpful assistant."}
             ]
 
+    
         sessions[user_message.session_id].append(
             {"role": "user", "content": user_message.message}
         )
 
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": user_message.model,
-            "messages": sessions[user_message.session_id],
-        }
+        if user_message.model.startswith("gemini"):
+            
+            gemini_history = [
+                {
+                    "role": entry["role"],
+                    "parts": [entry["content"]]  
+                }
+                for entry in sessions[user_message.session_id]
+                if entry["role"] in ["user", "assistant"]
+            ]
 
-        # Send the request to OpenAI's API
-        response = requests.post(API_URL, headers=headers, json=payload)
-        response.raise_for_status()
+            generation_config = {
+                "temperature": 1,
+                "top_p": 0.95,
+                "top_k": 40,
+                "max_output_tokens": 8192,
+            }
+            gemini_model = genai.GenerativeModel(
+                model_name=user_message.model, generation_config=generation_config
+            )
+            chat_session = gemini_model.start_chat(history=gemini_history)
+            response = chat_session.send_message(user_message.message)
+            assistant_response = response.text
 
-        # Log the entire response for debugging
-        data = response.json()
-        print("OpenAI API Response:", data)  # Log the raw API response
+        else:
+            headers = {
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": user_message.model,
+                "messages": sessions[user_message.session_id],
+            }
 
-        # Extract the assistant's response
-        assistant_response = data["choices"][0]["message"]["content"]
+            openai_response = requests.post(
+                "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
+            )
+            openai_response.raise_for_status()
+            data = openai_response.json()
+            assistant_response = data["choices"][0]["message"]["content"]
 
-        # Append assistant's response to the conversation
         sessions[user_message.session_id].append(
             {"role": "assistant", "content": assistant_response}
         )
 
-        # Return only the assistant's response
         return {"response": assistant_response}
 
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Request error: {str(e)}")
-    except KeyError as e:
-        print("KeyError in response structure:", e)  # Debug unexpected structure
-        raise HTTPException(status_code=500, detail="Unexpected response structure.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
