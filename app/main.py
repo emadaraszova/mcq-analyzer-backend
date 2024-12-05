@@ -15,6 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Register Exception Handler
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
@@ -25,6 +26,7 @@ async def validation_exception_handler(request, exc):
         status_code=400,
         content={"detail": exc.errors(), "body": exc.body},
     )
+
 
 # Include Routers
 app.include_router(responses_router, prefix="/api", tags=["Responses"])
