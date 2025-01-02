@@ -77,23 +77,47 @@ class GeminiService:
         except Exception as e:
             yield f"Error: {str(e)}"
 
+    def sanitize_input(self, input_text: str) -> str:
+        """
+        Sanitize the input text to ensure it's JSON-compatible.
+        """
+        import json
+        # Escape special characters
+        return json.dumps(input_text)
 
-    def extract_clinical_info(self, clinical_scenarios: str) -> list[ClinicalScenario]:
+    def extract_clinical_info(self, clinical_scenarios: str, number_of_questions: int) -> list[ClinicalScenario]:
         """
         Extract structured information from a clinical scenario using Gemini API.
         """
         try:
-            gemini_model = genai.GenerativeModel(model_name="gemini-1.5-flash", system_instruction="Extract information *only* from the clinical scenario provided below and create a JSON object conforming to the following schema. The gender can be only male/female/null. All keys specified in the schema *must* be present in the JSON output. If information for a particular key cannot be found within the clinical scenario, use `null` as the value for that key.  Disregard any other parts of the input (e.g., options, explanations) and focus solely on the clinical scenario.")
-            print("these are clinical scenarios:", clinical_scenarios)
+            # Sanitize clinical scenarios
+            sanitized_scenarios = self.sanitize_input(clinical_scenarios)
+            gemini_model = genai.GenerativeModel(
+                model_name="gemini-1.5-flash",
+                system_instruction=(
+                    f"Extract structured information *only* from the clinical scenarios that are part of the questions provided below."
+                    f"There are/is {number_of_questions} question(s) in total."
+                    "For each clinical scenario, create a JSON object conforming to the provided schema:\n"
+                    "- gender: [male, female, or null]\n"
+                    "- age: [integer or null]\n"
+                    "- symptoms: [string or null]\n"
+                    "- family background: [string or null]\n\n"
+                    "If information for a key cannot be found, use `null` as its value. If a clinical scenario mentions a diagnosis but not symptoms, "
+                    "set the symptoms key to `null`. If no clinical scenario exists for a question, include the question but set all keys to `null`.\n\n"
+                    "The output must be a JSON array where each element corresponds to one question."
+                )
+            )
+            print("these are clinical scenarios:", sanitized_scenarios)
+
             response = gemini_model.generate_content(
-                f"Extract the information (age, gender, symptoms, and family background) from the clinical scenarios that are part of the provided questiones: {clinical_scenarios}",
+                f"Extract the information (age, gender, symptoms, and family background) from the clinical scenarios that are part of the provided question(s): {sanitized_scenarios}",
                 generation_config=genai.GenerationConfig(
-                    response_mime_type="application/json", 
-                    response_schema=list[ClinicalScenario]  
+                    response_mime_type="application/json",
+                    response_schema=list[ClinicalScenario]
                 ),
             )
 
-             # Extract the structured data from the response
+            # Extract the structured data from the response
             structured_data = response.text  # Adjust based on actual response format
             if isinstance(structured_data, str):
                 import json

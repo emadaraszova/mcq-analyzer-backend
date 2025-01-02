@@ -1,21 +1,23 @@
 from fastapi import APIRouter, HTTPException
 from app.schemas.user_message import UserMessage
+from app.schemas.user_message import UserMessageAnalysis
 from app.services.gemini_service import GeminiService
 
 router = APIRouter()
 
 @router.post("/analyze-clinical", summary="Analyze Clinical Question")
-async def analyze_clinical_question(user_message: UserMessage):
+async def analyze_clinical_question(user_message: UserMessageAnalysis):
     """
     Analyze a clinical question to extract structured information.
     """
     try:
         service = GeminiService()
         # Call the Gemini service to extract information
-        structured_data = service.extract_clinical_info(user_message.message)
-        print("result:", structured_data)
+        structured_data = service.extract_clinical_info(clinical_scenarios=user_message.message, number_of_questions=user_message.number_of_questions)
+        print("number of questions:", user_message.number_of_questions)
         return {"structured_data": structured_data}
     except HTTPException as e:
+        print(f"HTTPException: {e.detail}")
         raise e
     except Exception as e:
         print(f"Error while analyzing clinical question: {str(e)}")
