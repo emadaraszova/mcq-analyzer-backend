@@ -5,3 +5,6 @@ class ClinicalScenario(TypedDict):
     age: str
     symptoms: str
     family_background: str
+
+class StructuredInfo(TypedDict):
+    questions: list[ClinicalScenario]

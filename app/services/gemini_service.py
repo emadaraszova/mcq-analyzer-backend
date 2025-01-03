@@ -1,7 +1,7 @@
 from app.core.config import settings
 import google.generativeai as genai
 from fastapi import HTTPException
-from app.schemas.clinical_scenario import ClinicalScenario
+from app.schemas.clinical_scenario import StructuredInfo
 
 
 class GeminiService:
@@ -85,13 +85,13 @@ class GeminiService:
         # Escape special characters
         return json.dumps(input_text)
 
-    def extract_clinical_info(self, clinical_scenarios: str, number_of_questions: int) -> list[ClinicalScenario]:
+    def extract_clinical_info(self, questions: str, number_of_questions: int) -> StructuredInfo:
         """
-        Extract structured information from a clinical scenario using Gemini API.
+        Extract structured information from questions using Gemini API.
         """
         try:
             # Sanitize clinical scenarios
-            sanitized_scenarios = self.sanitize_input(clinical_scenarios)
+            sanitized_questions = self.sanitize_input(questions)
             gemini_model = genai.GenerativeModel(
                 model_name="gemini-1.5-flash",
                 system_instruction=(
@@ -107,13 +107,13 @@ class GeminiService:
                     "The output must be a JSON array where each element corresponds to one question."
                 )
             )
-            print("these are clinical scenarios:", sanitized_scenarios)
+            print("these are clinical scenarios:", sanitized_questions)
 
             response = gemini_model.generate_content(
-                f"Extract the information (age, gender, symptoms, and family background) from the clinical scenarios that are part of the provided question(s): {sanitized_scenarios}",
+                f"Extract the information (gender, age, symptoms, and family background) from the clinical scenarios that are part of the provided question(s): {sanitized_questions}",
                 generation_config=genai.GenerationConfig(
                     response_mime_type="application/json",
-                    response_schema=list[ClinicalScenario]
+                    response_schema=StructuredInfo
                 ),
             )
 
