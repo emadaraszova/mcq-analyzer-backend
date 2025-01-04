@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from app.api.endpoints.responses import router as responses_router
+from app.api.endpoints.generate_response import router as response_router
+from app.api.endpoints.analyze_clinical import router as analyze_clinical_router
+
 
 app = FastAPI()
 
@@ -29,4 +31,6 @@ async def validation_exception_handler(request, exc):
 
 
 # Include Routers
-app.include_router(responses_router, prefix="/api", tags=["Responses"])
+app.include_router(response_router, prefix="/api", tags=["Responses"])
+app.include_router(analyze_clinical_router, prefix="/api", tags=["Clinical Analysis"])
+
