@@ -1,10 +1,11 @@
-from typing_extensions import TypedDict
+from pydantic import BaseModel
+from typing import List
 
-class ClinicalScenario(TypedDict):
+class ClinicalScenario(BaseModel):
     gender: str
     age: str
     symptoms: str
     family_background: str
 
-class StructuredInfo(TypedDict):
-    questions: list[ClinicalScenario]
+class StructuredInfo(BaseModel):
+    questions:  list[ClinicalScenario]

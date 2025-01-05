@@ -1,24 +1,12 @@
-import os
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
+from pydantic import Field
 
-# Load environment variables from .env
-load_dotenv()
+class Settings(BaseSettings):
+    OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
+    GEMINI_API_KEY: str = Field(..., env="GEMINI_API_KEY")
 
-
-class Settings:
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY")
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY")
-
-    # Ensure both API keys are set
-    if not OPENAI_API_KEY:
-        raise RuntimeError(
-            "OPENAI_API_KEY is not set. Please check your environment variables."
-        )
-    if not GEMINI_API_KEY:
-        raise RuntimeError(
-            "GEMINI_API_KEY is not set. Please check your environment variables."
-        )
-
-
-# Create a singleton settings instance
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+    
 settings = Settings()
