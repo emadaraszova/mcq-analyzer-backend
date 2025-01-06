@@ -1,12 +1,17 @@
 from app.core.config import settings
 import google.generativeai as genai
-from fastapi import HTTPException
 from app.schemas.clinical_scenario import StructuredInfo
+from app.services.base_service import BaseService
 
 
-class GeminiService:
+
+class GeminiService(BaseService):
     def __init__(self):
-        genai.configure(api_key=settings.GEMINI_API_KEY)
+        """
+        Initialize GeminiService with the API key.
+        """
+        super().__init__(api_key=settings.GEMINI_API_KEY)
+        genai.configure(api_key=self.api_key)
 
     def get_response(self, user_message, session):
         """
@@ -37,7 +42,7 @@ class GeminiService:
             response = chat_session.send_message(user_message.message)
             return response.text
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Gemini error: {str(e)}")
+            self.handle_exception(e, "Gemini")
 
     def get_stream_response(self, user_message, session):
         """
@@ -71,19 +76,11 @@ class GeminiService:
                 stream=True
             )
             for chunk in response_stream:
-                # Only yield chunks with text content
                 if chunk.text:
                     yield chunk.text
         except Exception as e:
             yield f"Error: {str(e)}"
 
-    def sanitize_input(self, input_text: str) -> str:
-        """
-        Sanitize the input text to ensure it's JSON-compatible.
-        """
-        import json
-        # Escape special characters
-        return json.dumps(input_text)
 
     def extract_clinical_info(self, questions: str, number_of_questions: int) -> StructuredInfo:
         """
@@ -92,6 +89,7 @@ class GeminiService:
         try:
             # Sanitize clinical scenarios
             sanitized_questions = self.sanitize_input(questions)
+            print("sant. questions:", sanitized_questions)
             gemini_model = genai.GenerativeModel(
                 model_name="gemini-1.5-flash",
                 system_instruction=(
@@ -107,7 +105,6 @@ class GeminiService:
                     "The output must be a JSON array where each element corresponds to one question."
                 )
             )
-            print("these are clinical scenarios:", sanitized_questions)
 
             response = gemini_model.generate_content(
                 f"Extract the information (gender, age, symptoms, and family background) from the clinical scenarios that are part of the provided question(s): {sanitized_questions}",
@@ -117,12 +114,13 @@ class GeminiService:
                 ),
             )
 
-            # Extract the structured data from the response
+         
+             # Extract the structured data from the response
             structured_data = response.text  # Adjust based on actual response format
             if isinstance(structured_data, str):
                 import json
                 structured_data = json.loads(structured_data)
 
-            return structured_data  # Ensure this is a list or dict
+            return structured_data
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Gemini error: {str(e)}")
+            self.handle_exception(e, "Gemini")

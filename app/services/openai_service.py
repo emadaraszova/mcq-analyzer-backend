@@ -1,16 +1,21 @@
 from app.core.config import settings
 from openai import OpenAI
-from fastapi import HTTPException
-from app.schemas.clinical_scenario import ClinicalScenario
+from app.services.base_service import BaseService
+from app.schemas.clinical_scenario import StructuredInfo
+from textwrap import dedent
 
 
-class OpenAIService:
+class OpenAIService(BaseService):
     def __init__(self):
+        """
+        Initialize the OpenAIService with the API key.
+        """
+        super().__init__(api_key=settings.OPENAI_API_KEY)
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
     def get_response(self, user_message, session):
         """
-        Generate a response using the Chat Completions API via the OpenAI client.
+        Generate a response using the Chat Completions API.
         """
         try:
             response = self.client.chat.completions.create(
@@ -19,7 +24,7 @@ class OpenAIService:
             )
             return response.choices[0].message.content
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"OpenAI error: {str(e)}")
+            self.handle_exception(e, "OpenAI")
 
     def get_stream_response(self, user_message, session):
         """
@@ -29,42 +34,139 @@ class OpenAIService:
             openai_stream = self.client.chat.completions.create(
                 model=user_message.model,
                 messages=session,
-                stream=True,  # Enable streaming
+                stream=True,  
             )
             for event in openai_stream:
-                # Access the "delta" attribute safely
                 delta = event.choices[0].delta
                 if hasattr(delta, "content"):
-                    yield delta.content  # Stream the content
+                    yield delta.content  
         except Exception as e:
             yield f"Error: {str(e)}"
 
-    def extract_clinical_info(self, questions: str, number_of_questions: int) -> list[ClinicalScenario]:
+    from app.core.config import settings
+from openai import OpenAI
+from app.services.base_service import BaseService
+from app.schemas.clinical_scenario import StructuredInfo
+from textwrap import dedent
+
+
+class OpenAIService(BaseService):
+    def __init__(self):
         """
-        Extract structured information from questions using GPT API.s
+        Initialize the OpenAIService with the API key.
+        """
+        super().__init__(api_key=settings.OPENAI_API_KEY)
+        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+    def get_response(self, user_message, session):
+        """
+        Generate a response using the Chat Completions API.
         """
         try:
-            response = self.client.chat.completions.parse(
+            response = self.client.chat.completions.create(
+                model=user_message.model,
+                messages=session,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            self.handle_exception(e, "OpenAI")
+
+    def get_stream_response(self, user_message, session):
+        """
+        Generate a streaming response using the Chat Completions API.
+        """
+        try:
+            openai_stream = self.client.chat.completions.create(
+                model=user_message.model,
+                messages=session,
+                stream=True,
+            )
+            for event in openai_stream:
+                delta = event.choices[0].delta
+                if hasattr(delta, "content"):
+                    yield delta.content
+        except Exception as e:
+            yield f"Error: {str(e)}"
+
+    def extract_clinical_info(self, questions: str, number_of_questions: int) -> StructuredInfo:
+        """
+        Extract structured information from questions using GPT API.
+        """
+        try:
+            response = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": f"Extract structured information *only* from the clinical scenarios that are part of the questions provided below."
-                        f"There are/is {number_of_questions} question(s) in total."
-                        "For each clinical scenario, create a JSON object conforming to the provided schema; no key should be missing:\n"
-                        "- gender: [male, female, or null]\n"
-                        "- age: [integer or null]\n"
-                        "- symptoms: [string or null]\n"
-                        "- family background: [string or null]\n\n"
-                        "If information for a key cannot be found, use `null` as its value. If a clinical scenario mentions a diagnosis but not symptoms, "
-                        "set the symptoms key to `null`. If no clinical scenario exists for a question, include the question but set all keys to `null`.\n\n"},
-                    {"role": "user", "content": "Extract the information (gender, age, symptoms, and family background) from the clinical scenarios that are part of the provided question(s): {sanitized_questions}."},
+                    {
+                        "role": "system",
+                        "content": dedent('''
+                            You are a clinical data extractor. You will be provided with test questions,
+                            and your goal will be to output structured information from the clinical scenarios 
+                            within the questions. Each clinical scenario must conform to the specified JSON schema, 
+                            including details such as gender, age, symptoms, and family background.
+                            Use `null` for any missing information.
+                        '''),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"There are {number_of_questions} question(s). "
+                            f"Extract structured information from the following clinical scenarios: {questions}."
+                        ),
+                    },
                 ],
-                response_format=list[ClinicalScenario],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "structured_info",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "questions": {
+                                    "type": "array",
+                                    "description": "A list of clinical scenarios for structured information.",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "gender": {
+                                                "type": "string",
+                                                "description": "The gender of the patient.",
+                                            },
+                                            "age": {
+                                                "type": "string",
+                                                "description": "The age of the patient.",
+                                            },
+                                            "symptoms": {
+                                                "type": "string",
+                                                "description": "The symptoms.",
+                                            },
+                                            "family_background": {
+                                                "type": "string",
+                                                "description": "Having similar issues in the family.",
+                                            },
+                                        },
+                                        "required": [
+                                            "gender",
+                                            "age",
+                                            "symptoms",
+                                            "family_background",
+                                        ],
+                                        "additionalProperties": False,
+                                    },
+                                }
+                            },
+                            "required": ["questions"],
+                            "additionalProperties": False,
+                        },
+                        "strict": True,
+                    },
+                },
             )
 
-            response = completion.choices[0].message
-            if math_response.parsed:
-                return math_response.parsed
-            elif math_response.refusal:
-                return math_response.refusal
+            structured_data = response.choices[0].message.content
+            if isinstance(structured_data, str):
+                import json
+                structured_data = json.loads(structured_data)
+
+            return structured_data
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"GPT error: {str(e)}")
+            self.handle_exception(e, "OpenAI")
