@@ -2,8 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from app.api.endpoints.generate_response import router as response_router
-from app.api.endpoints.analyze_clinical import router as analyze_clinical_router
+from app.api.endpoints.responses import router as response_router
+from app.api.endpoints.clinical_analysis import router as analyze_clinical_router
 
 # Initialize FastAPI app
 app = FastAPI(title="My App", description="API for Clinical and AI Responses", version="1.0.0")
