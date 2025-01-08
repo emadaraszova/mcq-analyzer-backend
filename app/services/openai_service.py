@@ -11,52 +11,7 @@ class OpenAIService(BaseService):
         Initialize the OpenAIService with the API key.
         """
         super().__init__(api_key=settings.OPENAI_API_KEY)
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-
-    def get_response(self, user_message, session):
-        """
-        Generate a response using the Chat Completions API.
-        """
-        try:
-            response = self.client.chat.completions.create(
-                model=user_message.model,
-                messages=session,
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            self.handle_exception(e, "OpenAI")
-
-    def get_stream_response(self, user_message, session):
-        """
-        Generate a streaming response using the Chat Completions API.
-        """
-        try:
-            openai_stream = self.client.chat.completions.create(
-                model=user_message.model,
-                messages=session,
-                stream=True,  
-            )
-            for event in openai_stream:
-                delta = event.choices[0].delta
-                if hasattr(delta, "content"):
-                    yield delta.content  
-        except Exception as e:
-            yield f"Error: {str(e)}"
-
-    from app.core.config import settings
-from openai import OpenAI
-from app.services.base_service import BaseService
-from app.schemas.clinical_scenario import StructuredInfo
-from textwrap import dedent
-
-
-class OpenAIService(BaseService):
-    def __init__(self):
-        """
-        Initialize the OpenAIService with the API key.
-        """
-        super().__init__(api_key=settings.OPENAI_API_KEY)
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        self.client = OpenAI(api_key=self.api_key)
 
     def get_response(self, user_message, session):
         """
