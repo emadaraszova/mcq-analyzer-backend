@@ -4,8 +4,7 @@ from typing import List
 class ClinicalScenario(BaseModel):
     gender: str
     age: str
-    symptoms: str
-    family_background: str
+    ethinicity: str
 
 class StructuredInfo(BaseModel):
     questions:  list[ClinicalScenario]

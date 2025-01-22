@@ -30,7 +30,6 @@ class BaseService:
             normalized_questions.append({
                 "gender": question.get("gender", "null"),
                 "age": question.get("age", "null"),
-                "symptoms": question.get("symptoms", "").strip().lower(),
-                "family_background": question.get("family_background", "").strip().lower(),
+                "ethinicity": question.get("ethinicity", "").strip().lower(),
             })
         return normalized_questions
