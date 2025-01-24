@@ -58,7 +58,7 @@ class OpenAIService(BaseService):
                             You are a clinical data extractor. You will be provided with test questions,
                             and your goal will be to output structured information from the clinical scenarios 
                             within the questions. Each clinical scenario must conform to the specified JSON schema, 
-                            including details such as gender, age, and ethnicity.
+                            including details such as gender, and ethnicity.
                             Use `null` for any missing information.
                         '''),
                     },
@@ -87,10 +87,6 @@ class OpenAIService(BaseService):
                                             "type": "string",
                                             "description": "The gender of the patient.",
                                         },
-                                        "age": {
-                                            "type": "string",
-                                            "description": "The age of the patient.",
-                                        },
                                         "ethnicity": {
                                             "type": "string",
                                             "description": "Ethnicity or race.",
@@ -98,7 +94,6 @@ class OpenAIService(BaseService):
                                     },
                                     "required": [
                                         "gender",
-                                        "age",
                                         "ethnicity",
                                     ],
                                     "additionalProperties": False

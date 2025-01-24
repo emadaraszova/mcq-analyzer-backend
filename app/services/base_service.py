@@ -29,7 +29,6 @@ class BaseService:
         for question in questions:
             normalized_questions.append({
                 "gender": question.get("gender", "null"),
-                "age": question.get("age", "null"),
                 "ethinicity": question.get("ethinicity", "").strip().lower(),
             })
         return normalized_questions

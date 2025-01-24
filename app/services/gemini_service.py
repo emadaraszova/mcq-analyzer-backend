@@ -97,7 +97,6 @@ class GeminiService(BaseService):
                     f"There are/is {number_of_questions} question(s) in total."
                     "For each clinical scenario, create a JSON object conforming to the provided schema:\n"
                     "- gender: [male, female, or null]\n"
-                    "- age: [number or null]\n"
                     "- ethnicity: [string or null]\n"
                     "If information for a key cannot be found, use `null` as its value."
                     "If no clinical scenario exists for a question, include the question but set all keys to `null`.\n\n"
@@ -106,7 +105,7 @@ class GeminiService(BaseService):
             )
 
             response = gemini_model.generate_content(
-                f"Extract the information (gender, age, symptoms, and family medical history) from the clinical scenarios that are part of the provided question(s): {sanitized_questions}",
+                f"Extract the information (gender and ethnicity) from the clinical scenarios that are part of the provided question(s): {sanitized_questions}",
                 generation_config=genai.GenerationConfig(
                     response_mime_type="application/json",
                     response_schema=StructuredInfo
