@@ -3,7 +3,7 @@ from typing import List
 
 class ClinicalScenario(BaseModel):
     gender: str
-    ethinicity: str
+    ethnicity: str
 
 class StructuredInfo(BaseModel):
     questions:  list[ClinicalScenario]
