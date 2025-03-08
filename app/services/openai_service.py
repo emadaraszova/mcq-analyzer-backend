@@ -22,10 +22,13 @@ class OpenAIService(BaseService):
             response = self.client.chat.completions.create(
                 model=user_message.model,
                 messages=session,
+                temperature=0.2,
+                top_p=1.0,
             )
             return response.choices[0].message.content
         except Exception as e:
             self.handle_exception(e, "OpenAI")
+
 
     def get_stream_response(self, user_message, session):
         """
@@ -36,6 +39,8 @@ class OpenAIService(BaseService):
                 model=user_message.model,
                 messages=session,
                 stream=True,
+                temperature=0,
+                top_p=1.0
             )
             for event in openai_stream:
                 delta = event.choices[0].delta
@@ -71,41 +76,39 @@ class OpenAIService(BaseService):
                     },
                 ],
                 response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "structured_info",  # Required parameter
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "questions": {
-                                "type": "array",
-                                "description": "A list of clinical scenarios for structured information.",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "gender": {
-                                            "type": "string",
-                                            "description": "The gender of the patient.",
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "structured_info",  
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "questions": {
+                                    "type": "array",
+                                    "description": "A list of clinical scenarios for structured information.",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "gender": {
+                                                "type": "string",
+                                                "description": "The gender of the patient."
+                                            },
+                                            "ethnicity": {
+                                                "type": "string",
+                                                "description": "Ethnicity or race."
+                                            }
                                         },
-                                        "ethnicity": {
-                                            "type": "string",
-                                            "description": "Ethnicity or race.",
-                                        }
-                                    },
-                                    "required": [
-                                        "gender",
-                                        "ethnicity",
-                                    ],
-                                    "additionalProperties": False
+                                        "required": ["gender", "ethnicity"],
+                                        "additionalProperties": False
+                                    }
                                 }
-                            }
-                        },
-                        "required": ["questions"],
-                        "additionalProperties": False
-                    },
+                            },
+                            "required": ["questions"],
+                            "additionalProperties": False
+                        }
+                    }
                 },
-            },
-        )
+                
+            )
             structured_data = response.choices[0].message.content
             if isinstance(structured_data, str):
                 structured_data = json.loads(structured_data)
