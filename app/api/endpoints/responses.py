@@ -53,7 +53,7 @@ def select_service(model: str):
     """
     if model.startswith("gemini"):
         return GeminiService()
-    elif model.startswith("gpt-"):
+    elif model.startswith("gpt-") or model == "chatgpt-4o-latest":
         return OpenAIService()
     else:
         raise ValueError(f"Invalid model specified: {model}. Supported models: gemini, gpt-*.")

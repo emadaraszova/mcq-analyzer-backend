@@ -27,10 +27,10 @@ class GeminiService(BaseService):
         ]
 
         generation_config = {
-            "temperature": 1,
-            "top_p": 0.95,
-            "top_k": 40,
-            "max_output_tokens": 8192,
+            "temperature": 0.2,
+            "top_p": 1.0,
+           # "top_k": 40,
+           # "max_output_tokens": 8192,
         }
 
         try:
