@@ -29,7 +29,6 @@ class OpenAIService(BaseService):
         except Exception as e:
             self.handle_exception(e, "OpenAI")
 
-
     def get_stream_response(self, user_message, session):
         """
         Generate a streaming response using the Chat Completions API.
@@ -40,7 +39,7 @@ class OpenAIService(BaseService):
                 messages=session,
                 stream=True,
                 temperature=0,
-                top_p=1.0
+                top_p=1.0,
             )
             for event in openai_stream:
                 delta = event.choices[0].delta
@@ -51,7 +50,7 @@ class OpenAIService(BaseService):
 
     def extract_clinical_info(self, questions: str, number_of_questions: int) -> StructuredInfo:
         """
-        Extract structured information from questions using GPT API.
+        Extract structured information from questions using the GPT API.
         """
         try:
             response = self.client.chat.completions.create(
@@ -59,13 +58,15 @@ class OpenAIService(BaseService):
                 messages=[
                     {
                         "role": "system",
-                        "content": dedent('''
+                        "content": dedent(
+                            """
                             You are a clinical data extractor. You will be provided with test questions,
                             and your goal will be to output structured information from the clinical scenarios 
                             within the questions. Each clinical scenario must conform to the specified JSON schema, 
-                            including details such as gender, and ethnicity.
+                            including details such as gender, ethnicity, and age.
                             Use `null` for any missing information.
-                        '''),
+                            """
+                        ),
                     },
                     {
                         "role": "user",
@@ -78,7 +79,7 @@ class OpenAIService(BaseService):
                 response_format={
                     "type": "json_schema",
                     "json_schema": {
-                        "name": "structured_info",  
+                        "name": "structured_info",
                         "schema": {
                             "type": "object",
                             "properties": {
@@ -95,9 +96,13 @@ class OpenAIService(BaseService):
                                             "ethnicity": {
                                                 "type": "string",
                                                 "description": "Ethnicity or race."
+                                            },
+                                            "age": {
+                                                "type": "integer",
+                                                "description": "The age of the patient."
                                             }
                                         },
-                                        "required": ["gender", "ethnicity"],
+                                        "required": ["gender", "ethnicity", "age"],
                                         "additionalProperties": False
                                     }
                                 }
@@ -107,8 +112,8 @@ class OpenAIService(BaseService):
                         }
                     }
                 },
-                
             )
+
             structured_data = response.choices[0].message.content
             if isinstance(structured_data, str):
                 structured_data = json.loads(structured_data)
