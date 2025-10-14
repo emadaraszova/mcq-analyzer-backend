@@ -13,18 +13,23 @@ class GeminiService(BaseService):
         super().__init__(api_key=settings.GEMINI_API_KEY)
         genai.configure(api_key=self.api_key)
 
+    def _to_gemini_history(self, session):
+        mapped = []
+        for entry in session:
+            role = entry.get("role")
+            content = entry.get("content", "")
+            if role == "user":
+                mapped.append({"role": "user", "parts": [content]})
+            elif role == "assistant":
+                mapped.append({"role": "model", "parts": [content]})
+        return mapped
+
+
     def get_response(self, user_message, session):
         """
         Generate a response using the Gemini API without streaming.
         """
-        gemini_history = [
-            {
-                "role": entry["role"],
-                "parts": [entry["content"]]
-            }
-            for entry in session
-            if entry["role"] in ["user", "assistant"]
-        ]
+        gemini_history = self._to_gemini_history(session)
 
         generation_config = {
             "temperature": 0.2,
@@ -43,43 +48,6 @@ class GeminiService(BaseService):
             return response.text
         except Exception as e:
             self.handle_exception(e, "Gemini")
-
-    def get_stream_response(self, user_message, session):
-        """
-        Generate a streaming response using the Gemini API.
-        """
-        gemini_history = [
-            {
-                "role": entry["role"],
-                "parts": [entry["content"]]
-            }
-            for entry in session
-            if entry["role"] in ["user", "assistant"]
-        ]
-
-        generation_config = {
-            "temperature": 1,
-            "top_p": 0.95,
-            "top_k": 40,
-            "max_output_tokens": 8192,
-        }
-
-        try:
-            gemini_model = genai.GenerativeModel(
-                model_name=user_message.model,
-                generation_config=generation_config
-            )
-
-            chat_session = gemini_model.start_chat(history=gemini_history)
-            response_stream = chat_session.send_message(
-                user_message.message,
-                stream=True
-            )
-            for chunk in response_stream:
-                if chunk.text:
-                    yield chunk.text
-        except Exception as e:
-            yield f"Error: {str(e)}"
 
 
     def extract_clinical_info(self, questions: str, number_of_questions: int) -> StructuredInfo:

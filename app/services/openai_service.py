@@ -29,24 +29,6 @@ class OpenAIService(BaseService):
         except Exception as e:
             self.handle_exception(e, "OpenAI")
 
-    def get_stream_response(self, user_message, session):
-        """
-        Generate a streaming response using the Chat Completions API.
-        """
-        try:
-            openai_stream = self.client.chat.completions.create(
-                model=user_message.model,
-                messages=session,
-                stream=True,
-                temperature=0,
-                top_p=1.0,
-            )
-            for event in openai_stream:
-                delta = event.choices[0].delta
-                if hasattr(delta, "content"):
-                    yield delta.content
-        except Exception as e:
-            yield f"Error: {str(e)}"
 
     def extract_clinical_info(self, questions: str, number_of_questions: int) -> StructuredInfo:
         """
