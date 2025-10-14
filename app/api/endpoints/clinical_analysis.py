@@ -14,7 +14,7 @@ async def analyze_clinical_question(user_message: UserMessageAnalysis):
     print(f"Model received: {user_message.model}")
     
     # Dynamically select the service based on the model
-    if user_message.model == "gemini-1.5-flash":
+    if user_message.model == "gemini-2.5-flash":
         service = GeminiService()
     elif user_message.model == "gpt-4o":
         service = OpenAIService()
