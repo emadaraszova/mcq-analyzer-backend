@@ -1,11 +1,11 @@
-from typing import Literal, Optional
+from typing import Literal, Optional, List
 from pydantic import BaseModel, Field
 
 # Request schema for the trigger endpoint
 class GenerateRequest(BaseModel):
     # Non-empty strings for validation
     message: str = Field(..., min_length=1, description="User prompt to process.")
-    model: str = Field(..., min_length=1, description="Model name, e.g., 'gpt-4o' or 'gemini-1.5-flash'.")
+    model: str = Field(..., min_length=1, description="Model name, e.g., 'gpt-4o' or 'gemini-2.5-flash'.")
     number_of_questions: int = Field(..., ge=1, le=1000, description="Target number of questions.")
     
 # Response schema returned by the trigger endpoint
@@ -34,3 +34,22 @@ class JobFinishedResponse(BaseModel):
 class JobFailedResponse(BaseModel):
     status: Literal["failed"]
     error: Optional[str] = None
+
+# Demographic shema
+class DistributionRow(BaseModel):
+    label: str
+    value: int
+
+DempgraphicCategory = Literal["Gender", "Age", "Ethnicity"]
+
+class DemographicData(BaseModel):
+    Gender: List[DistributionRow] = []
+    Ethnicity: List[DistributionRow] = []
+    Age: List[DistributionRow] = []
+
+class GenerateRequest(BaseModel):
+    message: str
+    model: str
+    number_of_questions: Optional[int] = None
+    demographicData: Optional[DemographicData] = None
+

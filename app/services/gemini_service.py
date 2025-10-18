@@ -59,7 +59,7 @@ class GeminiService(BaseService):
             sanitized_questions = self.sanitize_input(questions)
             print("sant. questions:", sanitized_questions)
             gemini_model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
+                model_name="gemini-2.5-flash",
                 system_instruction=(
                     f"Extract structured information *only* from the clinical scenarios that are part of the questions provided below."
                     f"There are/is {number_of_questions} question(s) in total."
