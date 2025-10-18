@@ -31,7 +31,7 @@ def trigger_generation(req: GenerateRequest):
     """
     try:
         from app.tasks.task_generate_texts import generate_texts
-
+        print((req.model_dump(),))
         job = q.enqueue(
         generate_texts,
         args=(req.model_dump(),),
