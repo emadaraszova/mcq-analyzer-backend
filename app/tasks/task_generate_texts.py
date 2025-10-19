@@ -3,6 +3,7 @@ import uuid
 from typing import Dict, Any, List, Optional, Tuple
 from app.services.openai_service import OpenAIService
 from app.services.gemini_service import GeminiService
+from app.services.einfra_service import EInfraService
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -31,6 +32,9 @@ def select_service(m: str):
     """
     Pick the model provider based on the model name.
     """
+    if m.startswith("llama"):
+        print(f"[generate] select_service → EInfraService (model='{m}')", flush=True)
+        return EInfraService()
     if m.startswith("gemini"):
         print(f"[generate] select_service → GeminiService (model='{m}')", flush=True)
         return GeminiService()

@@ -1,5 +1,6 @@
 import re
 from typing import Any, Dict, List, Tuple
+from app.services.einfra_service import EInfraService
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
 
@@ -38,6 +39,9 @@ def select_service(m: str):
     """
     Pick the model provider (Gemini or OpenAI) based on the model name prefix.
     """
+    if m.startswith("llama"):
+        print(f"[generate] select_service → EInfraService (model='{m}')", flush=True)
+        return EInfraService()
     if m.startswith("gemini"):
         print(f"[generate] select_service → GeminiService (model='{m}')", flush=True)
         return GeminiService()
