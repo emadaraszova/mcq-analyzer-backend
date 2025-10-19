@@ -14,9 +14,9 @@ from app.schemas.generate import (
 
 router = APIRouter()
 
-# Redis / RQ setup
+# Redis / RQ setup  
 redis_conn = Redis.from_url(settings.REDIS_URL)
-q = Queue(connection=redis_conn)
+q = Queue(name="generate", connection=redis_conn)
 
 
 @router.post(

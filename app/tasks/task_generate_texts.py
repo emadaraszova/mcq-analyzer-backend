@@ -184,6 +184,20 @@ def _single_run_generate_exact(
         return accumulated_text, min(first_count, exact_target)
 
     # Progress-driven loop (no hard cap)
+    #
+    # This loop asks the model for additional text until we reach the requested
+    # `exact_target` number of scenarios or until progress stalls. Loop invariants
+    # and break conditions:
+    #  - `accumulated_text` always contains the concatenation of all assistant
+    #    responses so far (and is used to count XXX-delimited scenarios).
+    #  - We break when any of these is true:
+    #      * current_count >= exact_target: we've reached the requested amount
+    #      * assistant_text is empty/whitespace: model returned nothing useful
+    #      * assistant_text contains no 'XXX' delimiters: no scenarios added
+    #      * new_count <= last_count: no progress (prevent infinite loop)
+    #
+    # These checks ensure the loop is safe and deterministic even if the model
+    # stops producing valid scenario blocks or returns malformed output.
     last_count = first_count
     while True:
         current_count = count_scenarios(accumulated_text)
@@ -256,6 +270,7 @@ def generate_texts(payload: Dict[str, Any]) -> Dict[str, Any]:
     """
     message: str = payload.get("message", "")
     model: str = payload.get("model", "gpt-4o")
+    print(payload)
     target: int = int(payload.get("number_of_questions", 1))
     demo: Optional[Dict[str, List[Dict[str, Any]]]] = payload.get("demographicData")
 

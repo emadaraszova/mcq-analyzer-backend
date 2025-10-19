@@ -42,9 +42,9 @@ class OpenAIService(BaseService):
                         "role": "system",
                         "content": dedent(
                             """
-                            You are a clinical data extractor. You will be provided with test questions,
-                            and your goal will be to output structured information from the clinical scenarios 
-                            within the questions. Each clinical scenario must conform to the specified JSON schema, 
+                            You are a clinical data extractor. You will be provided with clinical scenario(s),
+                            and your goal will be to output structured information from the clinical scenarios.
+                            Structured information for each clinical scenario must conform to the specified JSON schema, 
                             including details such as gender, ethnicity, and age.
                             Use `null` for any missing information.
                             """
@@ -53,7 +53,7 @@ class OpenAIService(BaseService):
                     {
                         "role": "user",
                         "content": (
-                            f"There are {number_of_questions} question(s). "
+                            f"There are {number_of_questions} scnario(s). "
                             f"Extract structured information from the following clinical scenarios: {questions}."
                         ),
                     },

@@ -61,13 +61,13 @@ class GeminiService(BaseService):
             gemini_model = genai.GenerativeModel(
                 model_name="gemini-2.5-flash",
                 system_instruction=(
-                    f"Extract structured information *only* from the clinical scenarios that are part of the questions provided below."
-                    f"There are/is {number_of_questions} question(s) in total."
+                    f"Extract structured information from the clinical scenarios provided below."
+                    f"There are/is {number_of_questions} scenatio(s) in total."
                     "For each clinical scenario, create a JSON object conforming to the provided schema:\n"
                     "- gender: [male, female, or null]\n"
                     "- ethnicity: [string or null]\n"
                     "If information for a key cannot be found, use `null` as its value."
-                    "If no clinical scenario exists for a question, include the question but set all keys to `null`.\n\n"
+                    "If no such information exists for a scenario, include the scenario but set all keys to `null`.\n\n"
                     "The output must be a JSON array where each element corresponds to one question."
                 )
             )
