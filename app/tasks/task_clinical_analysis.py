@@ -3,93 +3,39 @@
 from __future__ import annotations
 
 import logging
-import re
-from typing import Any, Dict, Iterable, Iterator, List, Sequence, Tuple, TypeVar
+from typing import Any, Dict, List, Tuple
 
 from app.services.einfra_service import EInfraService
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
 
+# import extracted helpers
+from app.utils.analysis_helpers import extract_scenarios, chunk
+
 logger = logging.getLogger(__name__)
 
-# Regex: match text delimited by XXX ... XXX (multiline, case-insensitive).
-SCENARIO_PATTERN = re.compile(r"XXX([\s\S]*?)XXX", re.IGNORECASE)
-
-T = TypeVar("T")
-
 # ---------------------------------------------------------------------------
-# Helpers
+# Provider selection
 # ---------------------------------------------------------------------------
-
-
-def extract_scenarios(text: str) -> List[Tuple[int, str]]:
-    """Extract scenarios delimited by ``XXX ... XXX`` from raw text.
-
-    The original order is preserved by returning (index, scenario_text) tuples.
-
-    Args:
-        text: Raw text that may contain one or more delimited scenarios.
-
-    Returns:
-        A list of (original_index, scenario_text) tuples.
-    """
-    scenarios: List[Tuple[int, str]] = []
-    for i, match in enumerate(SCENARIO_PATTERN.finditer(text)):
-        scenario = match.group(1).strip()
-        if scenario:
-            scenarios.append((i, scenario))
-    return scenarios
-
-
-def chunk(seq: Sequence[T] | Iterable[T], size: int) -> Iterator[List[T]]:
-    """Yield successive chunks of at most ``size`` items from a sequence/iterable.
-
-    Args:
-        seq: The sequence or iterable to chunk.
-        size: Maximum chunk size (> 0).
-
-    Yields:
-        Lists containing up to ``size`` items each.
-    """
-    if size <= 0:
-        raise ValueError("size must be > 0")
-    buf: List[T] = []
-    for item in seq:
-        buf.append(item)
-        if len(buf) == size:
-            yield buf
-            buf = []
-    if buf:
-        yield buf
 
 
 def select_service(model_name: str):
-    """Select a provider service class based on the model prefix.
-
-    Args:
-        model_name: Model identifier (e.g., ``gemini-2.5-flash``, ``gpt-4o``, ``llama3.3:latest``).
-
-    Returns:
-        An initialized service instance for the chosen provider.
-
-    Raises:
-        ValueError: If the model does not match a supported provider.
-    """
+    """Select a provider service class based on the model prefix."""
     if model_name.startswith("llama"):
         print(
-            f"[generate] select_service → EInfraService (model='{model_name}')",
+            f"[analyze] select_service → EInfraService (model='{model_name}')",
             flush=True,
         )
         return EInfraService()
     if model_name.startswith("gemini"):
         print(
-            f"[generate] select_service → GeminiService (model='{model_name}')",
+            f"[analyze] select_service → GeminiService (model='{model_name}')",
             flush=True,
         )
         return GeminiService()
     if model_name.startswith("gpt"):
         print(
-            f"[generate] select_service → OpenAIService (model='{model_name}')",
+            f"[analyze] select_service → OpenAIService (model='{model_name}')",
             flush=True,
         )
         return OpenAIService()
@@ -99,7 +45,7 @@ def select_service(model_name: str):
 
 
 # ---------------------------------------------------------------------------
-# Core generation
+# Core analysis
 # ---------------------------------------------------------------------------
 
 DEFAULT_BATCH_SIZE = 3  # Process at most three scenarios per LLM call
@@ -115,14 +61,8 @@ def analyze_clinical_questions(payload: Dict[str, Any]) -> Dict[str, Any]:
       4. Normalize and align results with inputs.
       5. Merge batches and return a unified structure.
 
-    The returned object aligns with the frontend expectation:
-    ``{'questions': [{ 'gender': ..., 'ethnicity': ..., 'age': ...}, ...]}``.
-
-    Args:
-        payload: Dictionary containing at least ``model`` and ``message`` keys.
-
     Returns:
-        A dictionary with a top-level ``questions`` list containing one entry per scenario.
+        {'questions': [{ 'gender': ..., 'ethnicity': ..., 'age': ...}, ...]}
     """
     model: str = payload.get("model", "gpt-4o")
     questions: str = payload.get("message", "")

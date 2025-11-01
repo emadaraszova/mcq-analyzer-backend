@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import re
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -11,42 +10,21 @@ from app.services.openai_service import OpenAIService
 from app.services.gemini_service import GeminiService
 from app.services.einfra_service import EInfraService
 
+# import the extracted helpers
+from app.utils.generation_helpers import (
+    count_scenarios,
+    trim_to_n_questions,
+    pick_filled_category,
+    build_initial_prompt,
+    build_group_prompt,
+    build_group_followup,
+)
+
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-# Match clinical scenarios delimited by XXX ... XXX (multiline, case-insensitive).
-SCENARIO_PATTERN = re.compile(r"XXX[\s\S]*?XXX", re.IGNORECASE)
-
-
-def count_scenarios(text: str) -> int:
-    """Count XXX-delimited scenarios in text."""
-    return len(SCENARIO_PATTERN.findall(text))
-
-
-def trim_to_n_questions(text: str, n: int) -> str:
-    """Trim concatenated output so it contains at most ``n`` XXX blocks.
-
-    This is used when the model overgenerates. We keep appending original
-    lines until we’ve accumulated ``n`` complete XXX…XXX blocks.
-    """
-    out_lines: List[str] = []
-    for line in text.splitlines(keepends=True):
-        out_lines.append(line)
-        if "XXX" in line and count_scenarios("".join(out_lines)) >= n:
-            break
-    return "".join(out_lines)
 
 
 def select_service(model_name: str):
-    """Return the provider service based on the model prefix.
-
-    Notes:
-        * We keep it simple and key off the prefix to select a provider.
-        * Printing is deliberate here to surface provider decisions in logs.
-    """
+    """Return the provider service based on the model prefix."""
     if model_name.startswith("llama"):
         print(
             f"[generate] select_service → EInfraService (model='{model_name}')",
@@ -71,74 +49,6 @@ def select_service(model_name: str):
 
 
 # ---------------------------------------------------------------------------
-# Demographic helpers
-# ---------------------------------------------------------------------------
-
-
-def pick_filled_category(
-    demo: Optional[Dict[str, List[Dict[str, Any]]]],
-) -> Optional[str]:
-    """Return the first demographic category that has at least one row.
-
-    We look in a fixed priority order so behavior is deterministic if more
-    than one category is filled.
-    """
-    if not demo:
-        return None
-    for cat in ["Gender", "Ethnicity", "Age"]:
-        if demo.get(cat, []):
-            return cat
-    return None
-
-
-def category_constraint_phrase(category: str, label: str) -> str:
-    """Human-readable phrase describing a subgroup constraint.
-
-    The phrasing is meant for prompts—short, clear, and unambiguous.
-    """
-    if category == "Gender":
-        lower = label.strip().lower()
-        if lower in ("female", "woman", "women"):
-            return "patients who are women"
-        if lower in ("male", "man", "men"):
-            return "patients who are men"
-        return f"patients whose gender is {label}"
-    if category == "Ethnicity":
-        return f"patients whose ethnicity is {label}"
-    if category == "Age":
-        return f"patients aged {label}"
-    return f"patients matching: {label}"
-
-
-def build_group_prompt(base_message: str, category: str, label: str, count: int) -> str:
-    """Build the first user message for a demographic batch.
-
-    Adds an exact-count requirement and a clear subgroup hint.
-    """
-    group_phrase = category_constraint_phrase(category, label)
-    return (
-        f"{base_message.strip()}\n\n"
-        f"Generate exactly {count} question(s) for {group_phrase}.\n"
-    )
-
-
-def build_group_followup(
-    remaining: int, category: Optional[str], label: Optional[str]
-) -> str:
-    """Build a follow-up message for the same subgroup.
-
-    Used when we need to continue generation in incremental rounds.
-    """
-    if category and label:
-        group_phrase = category_constraint_phrase(category, label)
-        return (
-            f"Please continue with the remaining {remaining} question(s) "
-            f"for {group_phrase}."
-        )
-    return f"Please continue with the remaining {remaining} question(s)."
-
-
-# ---------------------------------------------------------------------------
 # Core generation
 # ---------------------------------------------------------------------------
 
@@ -151,20 +61,7 @@ def _single_run_generate_exact(
     group_category: Optional[str] = None,
     group_label: Optional[str] = None,
 ) -> Tuple[str, int]:
-    """Generate up to ``exact_target`` XXX-delimited questions in one run.
-
-    Strategy:
-        1) Send an initial prompt (optionally constrained by demographics).
-        2) Count XXX blocks in the reply.
-        3) If under target, keep asking the model to continue until:
-           - target is reached, or
-           - no progress is observed, or
-           - the model returns empty/whitespace.
-        4) If we overshoot, trim back to the requested count.
-
-    Returns:
-        (full_text, count_of_XXX_blocks)
-    """
+    """Generate up to ``exact_target`` XXX-delimited questions in one run."""
     run_id = str(uuid.uuid4())
     print(
         f"[generate:{run_id}] START exact_target={exact_target} model={model} "
@@ -183,9 +80,10 @@ def _single_run_generate_exact(
             flush=True,
         )
     else:
-        user_first_message = base_message
+        # No demographic constraint
+        user_first_message = build_initial_prompt(base_message, exact_target)
         print(
-            f"[generate:{run_id}] First message (base prompt only):\n"
+            f"[generate:{run_id}] First message (base prompt + exact count):\n"
             f"---8<---\n{user_first_message}\n---8<---",
             flush=True,
         )
@@ -238,7 +136,6 @@ def _single_run_generate_exact(
         return accumulated_text, min(first_count, exact_target)
 
     # --- Progress-driven loop (no hard cap) ---
-    # Continues until target is reached or progress stalls.
     last_count = first_count
     while True:
         current_count = count_scenarios(accumulated_text)
@@ -250,7 +147,14 @@ def _single_run_generate_exact(
             break
 
         remaining = exact_target - current_count
-        followup = build_group_followup(remaining, group_category, group_label)
+
+        # Follow-up starts with the original initial message
+        followup = build_group_followup(
+            message=base_message,
+            remaining=remaining,
+            category=group_category,
+            label=group_label,
+        )
 
         print(
             f"[generate:{run_id}] Asking follow-up (remaining={remaining}): {followup}",
@@ -269,11 +173,9 @@ def _single_run_generate_exact(
             )
             break
 
-        # Append new content and track it in the conversation history.
         accumulated_text += ("\n\n" if accumulated_text else "") + assistant_text
         session.append({"role": "assistant", "content": assistant_text})
 
-        # Count again after appending; ensure we made progress.
         new_count = count_scenarios(accumulated_text)
         print(
             f"[generate:{run_id}] Chunk len={len(assistant_text)} "
@@ -288,7 +190,6 @@ def _single_run_generate_exact(
             break
         last_count = new_count
 
-    # Final safety trim if we overshot the requested count.
     final_count = count_scenarios(accumulated_text)
     if final_count > exact_target:
         print(
@@ -306,12 +207,7 @@ def _single_run_generate_exact(
 
 
 def generate_texts(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """Orchestrate question generation (single batch or demographic batches).
-
-    Two modes:
-        • CASE A – single-batch generation (no demographics provided)
-        • CASE B – multi-batch generation according to a demographic distribution
-    """
+    """Orchestrate question generation (single batch or demographic batches)."""
     message: str = payload.get("message", "")
     model: str = payload.get("model", "gpt-4o")
     print(f"[generate] payload keys={list(payload.keys())}", flush=True)
@@ -351,8 +247,6 @@ def generate_texts(payload: Dict[str, Any]) -> Dict[str, Any]:
             flush=True,
         )
 
-        # If we couldn't detect XXX blocks at all, return whatever the model
-        # produced and note why (helps debugging front-end expectations).
         if actual == 0:
             return {
                 "status": "completed",
@@ -394,7 +288,6 @@ def generate_texts(payload: Dict[str, Any]) -> Dict[str, Any]:
             "response": text,
         }
 
-    # Validate sum of per-group counts matches the requested total.
     total_requested = sum(int(g.get("value", 0)) for g in groups)
     print(
         f"[generate:{session_id}] groups={groups} total_requested={total_requested}",
@@ -410,7 +303,6 @@ def generate_texts(payload: Dict[str, Any]) -> Dict[str, Any]:
     combined_count = 0
     batches_meta: List[Dict[str, Any]] = []
 
-    # Process each demographic group independently and collect results.
     for idx, group in enumerate(groups, start=1):
         label: str = str(group["label"])
         qty: int = int(group["value"])
@@ -420,7 +312,6 @@ def generate_texts(payload: Dict[str, Any]) -> Dict[str, Any]:
             flush=True,
         )
 
-        # Log the effective prompt used for transparency/debugging.
         eff_prompt = build_group_prompt(message, chosen_category, label, qty)
         print(
             f"[generate:{session_id}] Effective prompt for group:\n"
@@ -442,7 +333,6 @@ def generate_texts(payload: Dict[str, Any]) -> Dict[str, Any]:
             flush=True,
         )
 
-        # Per-group metadata is returned so the UI can display breakdowns.
         batches_meta.append(
             {
                 "index": idx,
@@ -455,12 +345,10 @@ def generate_texts(payload: Dict[str, Any]) -> Dict[str, Any]:
             }
         )
 
-        # Add a human-readable header before each subgroup block in the final text.
         header = f"### Group: {chosen_category}='{label}' ({batch_actual}/{qty})\n\n"
         combined_texts.append(header + (batch_text or ""))
         combined_count += batch_actual
 
-    # Merge groups and (if needed) trim overshoot.
     combined_response = "\n\n".join(t for t in combined_texts if t.strip())
 
     total_after_concat = count_scenarios(combined_response)
