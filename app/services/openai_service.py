@@ -40,11 +40,11 @@ class OpenAIService(BaseService):
             response = self.client.chat.completions.create(
                 model=user_message.model,
                 messages=session,
-                temperature=0.2,
-                top_p=1.0,
+                # temperature=0.2,
+                # top_p=1.0,
             )
             return response.choices[0].message.content
-        except Exception as e:  # noqa: BLE001 - provider error surfaced uniformly
+        except Exception as e:  # pylint: disable=broad-exception-caught
             self.handle_exception(e, "OpenAI")
 
     def extract_clinical_info(
