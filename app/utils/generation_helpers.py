@@ -57,7 +57,10 @@ def build_initial_prompt(base_message: str, count: int) -> str:
     Build the first user message when there's NO demographic constraint.
     FE no longer includes the number, so BE appends it here.
     """
-    return f"{base_message.strip()}\n\n" f"Generate exactly {count} question(s).\n"
+    return (
+        f"{base_message.strip()}\n\n"
+        f"Generate exactly {count} question(s) (in batches of 10).\n"
+    )
 
 
 def build_group_prompt(base_message: str, category: str, label: str, count: int) -> str:

@@ -53,8 +53,8 @@ class GeminiService(BaseService):
         gemini_history = self._to_gemini_history(session)
 
         generation_config = {
-            "temperature": 0.2,
-            "top_p": 1.0,
+            # "temperature": 0.2,
+            # "top_p": 1.0,
             # "top_k": 40,
             # "max_output_tokens": 8192,
         }
