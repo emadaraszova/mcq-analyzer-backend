@@ -59,7 +59,7 @@ def build_initial_prompt(base_message: str, count: int) -> str:
     """
     return (
         f"{base_message.strip()}\n\n"
-        f"Generate exactly {count} question(s) (in batches of 10).\n"
+        f"Generate exactly {count} question(s) (in batches of max 10).\n"
     )
 
 
