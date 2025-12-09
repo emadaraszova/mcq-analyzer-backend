@@ -53,7 +53,7 @@ class OpenAIService(BaseService):
         """Extract structured clinical information from scenario text.
 
         The model is instructed to return a JSON object with a top-level
-        ``questions`` array. Each element contains ``gender``, ``ethnicity``,
+        ``questions`` array. Each element contains ``sex``, ``ethnicity``,
         and ``age`` fields.
 
         Args:
@@ -75,7 +75,7 @@ class OpenAIService(BaseService):
                             You will be provided with one or more clinical scenarios as plain text.
 
                             For each scenario, extract and return the following structured fields:
-                            - gender
+                            - sex
                             - ethnicity
                             - age
 
@@ -112,9 +112,9 @@ class OpenAIService(BaseService):
                                     "items": {
                                         "type": "object",
                                         "properties": {
-                                            "gender": {
+                                            "sex": {
                                                 "type": "string",
-                                                "description": "The gender of the patient.",
+                                                "description": "The sex of the patient.",
                                             },
                                             "ethnicity": {
                                                 "type": "string",
@@ -125,7 +125,7 @@ class OpenAIService(BaseService):
                                                 "description": "The age of the patient.",
                                             },
                                         },
-                                        "required": ["gender", "ethnicity", "age"],
+                                        "required": ["sex", "ethnicity", "age"],
                                         "additionalProperties": False,
                                     },
                                 }

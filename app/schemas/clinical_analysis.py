@@ -88,12 +88,12 @@ class ClinicalScenario(BaseModel):
     """Structured representation of a single clinical scenario.
 
     Attributes:
-        gender: The patient's gender (e.g., 'Male', 'Female', 'Other').
+        sex: The patient's sex (e.g., 'Male', 'Female', 'Other').
         ethnicity: The patient's ethnicity.
         age: The patient's age in years.
     """
 
-    gender: str
+    sex: str
     ethnicity: str
     age: int
 

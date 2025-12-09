@@ -97,7 +97,7 @@ class GeminiService(BaseService):
                     You will be provided with one or more clinical scenarios as plain text.
                     
                     For each scenario, extract and return the following structured fields:
-                    - gender
+                    - sex
                     - ethnicity
                     - age
 
