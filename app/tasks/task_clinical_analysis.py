@@ -62,7 +62,7 @@ def analyze_clinical_questions(payload: Dict[str, Any]) -> Dict[str, Any]:
       5. Merge batches and return a unified structure.
 
     Returns:
-        {'questions': [{ 'gender': ..., 'ethnicity': ..., 'age': ...}, ...]}
+        {'questions': [{ 'sex': ..., 'ethnicity': ..., 'age': ...}, ...]}
     """
     model: str = payload.get("model", "gpt-4o")
     questions: str = payload.get("message", "")
@@ -104,7 +104,7 @@ def analyze_clinical_questions(payload: Dict[str, Any]) -> Dict[str, Any]:
                 extracted_questions = extracted
             else:
                 extracted_questions = [
-                    {"gender": None, "ethnicity": None, "age": None}
+                    {"sex": None, "ethnicity": None, "age": None}
                 ] * batch_count
         else:
             extracted_questions = extracted.get("questions", [])
@@ -113,7 +113,7 @@ def analyze_clinical_questions(payload: Dict[str, Any]) -> Dict[str, Any]:
         if len(extracted_questions) < batch_count:
             deficit = batch_count - len(extracted_questions)
             extracted_questions += [
-                {"gender": None, "ethnicity": None, "age": None}
+                {"sex": None, "ethnicity": None, "age": None}
             ] * deficit
         elif len(extracted_questions) > batch_count:
             extracted_questions = extracted_questions[:batch_count]

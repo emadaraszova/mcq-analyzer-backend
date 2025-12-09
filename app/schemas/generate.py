@@ -104,18 +104,18 @@ class DistributionRow(BaseModel):
     value: int
 
 
-DemographicCategory = Literal["Gender", "Age", "Ethnicity"]
+DemographicCategory = Literal["Sex", "Age", "Ethnicity"]
 
 
 class DemographicData(BaseModel):
     """Represents demographic distributions for generated questions.
 
     Attributes:
-        Gender: List of gender-based distribution rows.
+        Sex: List of sex-based distribution rows.
         Ethnicity: List of ethnicity-based distribution rows.
         Age: List of age-based distribution rows.
     """
 
-    Gender: List[DistributionRow] = Field(default_factory=list)
+    Sex: List[DistributionRow] = Field(default_factory=list)
     Ethnicity: List[DistributionRow] = Field(default_factory=list)
     Age: List[DistributionRow] = Field(default_factory=list)

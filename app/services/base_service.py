@@ -64,18 +64,18 @@ class BaseService:
 
         Returns:
             A list of normalized dictionaries with at least:
-            - ``gender`` (str)
+            - ``sex`` (str)
             - ``ethnicity`` (str)
         """
         normalized: List[Dict[str, Any]] = []
         for q in questions:
-            gender = (q.get("gender") or "null").strip()
+            sex = (q.get("sex") or "null").strip()
             ethnicity_raw = q.get("ethnicity") or ""
             ethnicity = ethnicity_raw.strip().lower() or "null"
 
             normalized.append(
                 {
-                    "gender": gender,
+                    "sex": sex,
                     "ethnicity": ethnicity,
                 }
             )

@@ -62,7 +62,7 @@ class EInfraService(BaseService):
 
         The model is instructed to return a JSON object conforming to a schema
         that includes a top-level ``questions`` array. Each element contains
-        ``gender``, ``ethnicity``, and ``age`` fields.
+        ``sex``, ``ethnicity``, and ``age`` fields.
 
         Args:
             questions: Raw scenario text (1 or more scenarios).
@@ -86,7 +86,7 @@ class EInfraService(BaseService):
                             You will be provided with one or more clinical scenarios as plain text.
                             
                             For each scenario, extract and return the following structured fields:
-                            - gender
+                            - sex
                             - ethnicity
                             - age
 
@@ -123,10 +123,10 @@ class EInfraService(BaseService):
                                     "items": {
                                         "type": "object",
                                         "properties": {
-                                            "gender": {
+                                            "sex": {
                                                 "type": "string",
                                                 "description": (
-                                                    "The gender of the patient."
+                                                    "The sex of the patient."
                                                 ),
                                             },
                                             "ethnicity": {
@@ -140,7 +140,7 @@ class EInfraService(BaseService):
                                                 ),
                                             },
                                         },
-                                        "required": ["gender", "ethnicity", "age"],
+                                        "required": ["sex", "ethnicity", "age"],
                                         "additionalProperties": False,
                                     },
                                 }

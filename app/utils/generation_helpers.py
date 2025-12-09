@@ -30,7 +30,7 @@ def pick_filled_category(
     """Return the first demographic category that has at least one row."""
     if not demo:
         return None
-    for cat in ["Gender", "Ethnicity", "Age"]:
+    for cat in ["Sex", "Ethnicity", "Age"]:
         if demo.get(cat, []):
             return cat
     return None
@@ -38,13 +38,13 @@ def pick_filled_category(
 
 def category_constraint_phrase(category: str, label: str) -> str:
     """Human-readable phrase describing a subgroup constraint."""
-    if category == "Gender":
+    if category == "Sex":
         lower = label.strip().lower()
         if lower in ("female", "woman", "women"):
             return "patients who are women"
         if lower in ("male", "man", "men"):
             return "patients who are men"
-        return f"patients whose gender is {label}"
+        return f"patients whose sex is {label}"
     if category == "Ethnicity":
         return f"patients whose ethnicity is {label}"
     if category == "Age":
